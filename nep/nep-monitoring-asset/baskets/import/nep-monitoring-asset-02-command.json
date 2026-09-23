@@ -123,7 +123,7 @@
                     "order": "8"
                 }
             },
-            "command": "PluginContribDir + \"/check_glpi_notification_queue\"",
+            "command": "PluginContribDir + /check_glpi_notification_queue",
             "disabled": false,
             "fields": [],
             "imports": [],
