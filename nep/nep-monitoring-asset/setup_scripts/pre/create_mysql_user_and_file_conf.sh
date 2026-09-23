@@ -27,34 +27,42 @@ function create_mysql_user_and_conf() {
     mysql_host="mariadb.neteyelocal"
     mysql_port=3306
 
-    if neteye_is_ocs_unsupported; then
-        echo "NetEye >= 4.48 detected: OCS access is disabled"
-    fi
-
     if [ -f "$mysql_pwd_file" ]; then
         echo "$mysql_pwd_file already exists. Reusing existing credentials."
         mysql_password=$(<"$mysql_pwd_file")
     else
         mysql_password=$(generate_and_save_pw "$mysql_username")
-        echo " - Creating Database User for access"
-        cat << EOF | mysql
+    fi
+
+    echo " - Ensuring Database User exists"
+    cat << EOF | mysql
 CREATE USER IF NOT EXISTS '${mysql_username}'@'%' IDENTIFIED BY '${mysql_password}';
-CREATE USER IF NOT EXISTS'${mysql_username}'@'localhost' IDENTIFIED BY '${mysql_password}';
-GRANT SELECT on glpi.* to '${mysql_username}'@'localhost';
-GRANT SELECT on glpi.* to '${mysql_username}'@'%';
+CREATE USER IF NOT EXISTS '${mysql_username}'@'localhost' IDENTIFIED BY '${mysql_password}';
+GRANT SELECT ON glpi.* TO '${mysql_username}'@'localhost';
+GRANT SELECT ON glpi.* TO '${mysql_username}'@'%';
 FLUSH PRIVILEGES;
 EOF
 
-        if ! neteye_is_ocs_unsupported; then
-            cat << EOF | mysql
-GRANT SELECT on ocsweb.* to '${mysql_username}'@'localhost';
-GRANT SELECT on ocsweb.* to '${mysql_username}'@'%';
+    if neteye_is_ocs_unsupported; then
+        echo " - Removing legacy OCS database access"
+        cat << EOF | mysql
+REVOKE ALL PRIVILEGES, GRANT OPTION FROM '${mysql_username}'@'localhost';
+REVOKE ALL PRIVILEGES, GRANT OPTION FROM '${mysql_username}'@'%';
+GRANT SELECT ON glpi.* TO '${mysql_username}'@'localhost';
+GRANT SELECT ON glpi.* TO '${mysql_username}'@'%';
 FLUSH PRIVILEGES;
 EOF
-        fi
+    else
+        echo " - Ensuring legacy OCS database access"
+        cat << EOF | mysql
+GRANT SELECT ON ocsweb.* TO '${mysql_username}'@'localhost';
+GRANT SELECT ON ocsweb.* TO '${mysql_username}'@'%';
+FLUSH PRIVILEGES;
+EOF
+    fi
 
-        echo "Create Asset config file"
-        cat << EOF > /neteye/shared/monitoring/plugins/check_assetmanagement.conf
+    echo "Create Asset config file"
+    cat << EOF > /neteye/shared/monitoring/plugins/check_assetmanagement.conf
 \$mariadb_host = "${mysql_host}";
 
 \$glpi_db ="glpi";
@@ -62,13 +70,12 @@ EOF
 \$glpi_pass = "${mysql_password}";
 EOF
 
-        if ! neteye_is_ocs_unsupported; then
-            cat << EOF >> /neteye/shared/monitoring/plugins/check_assetmanagement.conf
+    if ! neteye_is_ocs_unsupported; then
+        cat << EOF >> /neteye/shared/monitoring/plugins/check_assetmanagement.conf
 \$ocs_db = "ocsweb";
 \$ocs_user = "${mysql_username}";
 \$ocs_pass = "${mysql_password}";
 EOF
-        fi
     fi
 }
 
