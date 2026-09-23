@@ -681,6 +681,7 @@ last_backup)
     [ -z "$HANA_BACKUP_TYPE" ] && HANA_BACKUP_TYPE="complete data backup"
     check_backup
     sqlret=$?
+    [ $sqlret -eq $STATE_UNKNOWN ] && exit $STATE_UNKNOWN
     if [ $sqlret -eq 0 ]; then
         last_backup=$(cat $TMPFILE | grep -v START_TIME | head -1)
         if [ -z "$last_backup" ]; then
