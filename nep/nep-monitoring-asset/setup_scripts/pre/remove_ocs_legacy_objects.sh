@@ -76,13 +76,6 @@ fi
 clean_import_baskets
 
 if [[ $neteye_deployment == 'single_node' ]]; then
-    remove_director_object serviceset "nx-ss-neteye-asset-state"
-    remove_director_object serviceset "nx-ss-neteye-asset-disk-state"
-    remove_director_object service "Asset Duplicates"
-    remove_director_object service "Asset Old not up-to-date"
-    remove_director_object service "Timer OCS GLPI full sync"
-    remove_director_object service "Disk OCS Reports Free space"
-    remove_director_object service "Disk OCS Server Free space"
     remove_director_object command "nx-c-check_inventory"
     exit 0
 fi
@@ -90,13 +83,6 @@ fi
 if [[ $neteye_deployment == 'cluster' && $neteye_node_type == 'node' ]]; then
     SERVICE="icingaweb2"
     if is_active "$SERVICE"; then
-        remove_director_object serviceset "nx-ss-neteye-asset-state"
-        remove_director_object serviceset "nx-ss-neteye-asset-disk-state"
-        remove_director_object service "Asset Duplicates"
-        remove_director_object service "Asset Old not up-to-date"
-        remove_director_object service "Timer OCS GLPI full sync"
-        remove_director_object service "Disk OCS Reports Free space"
-        remove_director_object service "Disk OCS Server Free space"
         remove_director_object command "nx-c-check_inventory"
     else
         echo "[i] Inactive Cluster Node. Skipping Director cleanup."
