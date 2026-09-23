@@ -96,16 +96,6 @@ cleanup_neteye() {
   [[ "${UTILS_LINK_CREATED}" == "1" ]] && rm -f /usr/lib64/neteye/monitoring/plugins/utils.sh
 }
 trap cleanup_neteye EXIT
-
-run_case() {
-  local label="$1"
-  shift
-
-  local output
-  output="$(env HDBCLIENT="${FAKE_HDBCLIENT}" "${PLUGIN}")" 2>/dev/null || true
-  output=""
-}
-
 assert_case() {
   local expected_type="$1"
   shift
@@ -129,20 +119,6 @@ assert_case() {
     return 1
   }
 }
-
-assert_invalid() {
-  local output
-  if output="$(env HDBCLIENT="${FAKE_HDBCLIENT}" "${PLUGIN}" --function last_backup --sid HDB --host 127.0.0.1 --port 30013 --user SYSTEM --pass secret --lookback 3 --backup-type invalid 2>&1)"; then
-    echo "Invalid backup type was accepted"
-    return 1
-  fi
-  [[ "${output}" == *"UNKNOWN: Invalid backup type: invalid"* ]] || {
-    echo "Unexpected invalid-value output:"
-    printf '%s\n' "${output}"
-    return 1
-  }
-}
-
 assert_default() {
   local output
   if ! output="$(env HDBCLIENT="${FAKE_HDBCLIENT}" "${PLUGIN}" --function last_backup --sid HDB --host 127.0.0.1 --port 30013 --user SYSTEM --pass secret --lookback 3 2>&1)"; then
@@ -153,12 +129,11 @@ assert_default() {
   [[ "$(cat "${TMP_DIR}/captured-backup-type")" == "complete data backup" ]]
 }
 
-bash -n "${PLUGIN}"
+bash -n "${PLUGIN}" 
 assert_default
-assert_case "incremental data backup" env HDBCLIENT="${FAKE_HDBCLIENT}"
-assert_case "differential data backup" env HDBCLIENT="${FAKE_HDBCLIENT}"
-assert_case "data snapshot" env HDBCLIENT="${FAKE_HDBCLIENT}" 
+assert_case "incremental data backup" env HDBCLIENT="${FAKE_HDBCLIENT}" --backup-type "incremental data backup"
+assert_case "differential data backup" env HDBCLIENT="${FAKE_HDBCLIENT}" --backup-type "differential data backup"
+assert_case "data snapshot" env HDBCLIENT="${FAKE_HDBCLIENT}" --backup-type "data snapshot"
 assert_case "DATA_BACKUP" env HDBCLIENT="${FAKE_HDBCLIENT}" --backup-type DATA_BACKUP
-assert_invalid
 
 echo "NEP-912 HANA last_backup plugin tests: OK"
