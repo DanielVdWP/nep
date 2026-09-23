@@ -46,8 +46,8 @@ EOF
     if neteye_is_ocs_unsupported; then
         echo " - Removing legacy OCS database access"
         cat << EOF | mysql
-REVOKE ALL PRIVILEGES, GRANT OPTION FROM '${mysql_username}'@'localhost';
-REVOKE ALL PRIVILEGES, GRANT OPTION FROM '${mysql_username}'@'%';
+REVOKE ALL PRIVILEGES, GRANT OPTION ON ocsweb.* FROM '${mysql_username}'@'localhost';
+REVOKE ALL PRIVILEGES, GRANT OPTION ON ocsweb.* FROM '${mysql_username}'@'%';
 GRANT SELECT ON glpi.* TO '${mysql_username}'@'localhost';
 GRANT SELECT ON glpi.* TO '${mysql_username}'@'%';
 FLUSH PRIVILEGES;
