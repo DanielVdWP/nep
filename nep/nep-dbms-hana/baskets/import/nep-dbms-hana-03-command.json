@@ -164,8 +164,6 @@
                 },
                 "--backup-type": {
                     "description": "backup type to be used by last_backup",
-                    "set_if": "$nx_sap_hana_backup_type$",
-                    "set_if_format": "string",
                     "value": "$nx_sap_hana_backup_type$"
                 },
                 "--pass": {
