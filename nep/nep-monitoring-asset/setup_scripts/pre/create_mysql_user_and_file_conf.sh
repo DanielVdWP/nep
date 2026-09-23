@@ -9,6 +9,12 @@ SETUP_LIBRARY=${NEP_STAGE_DIR}/setup/library
 ##########################################
 ## Script main code: add your code here ##
 ##########################################
+function neteye_is_ocs_unsupported() {
+    local version
+    version=$(sed -n 's/^NetEye release \([0-9][0-9]*\.[0-9][0-9]*\).*/\1/p' /etc/neteye-release)
+    [[ -n "$version" ]] && [[ "$(printf '%s\n' "$version" "4.48" | sort -V | head -n1)" == "4.48" ]]
+}
+
 . /usr/share/neteye/scripts/rpm-functions.sh
 . /usr/share/neteye/secure_install/functions.sh
 
