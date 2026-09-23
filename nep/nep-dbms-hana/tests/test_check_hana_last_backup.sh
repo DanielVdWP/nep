@@ -100,8 +100,10 @@ assert_case() {
   local expected_type="$1"
   shift
 
+  export HDBCLIENT="${FAKE_HDBCLIENT}"
+
   local output
-  if ! output="$(env "$@" "${PLUGIN}" --function last_backup --sid HDB --host 127.0.0.1 --port 30013 --user SYSTEM --pass secret --lookback 3 2>&1)"; then
+  if ! output="$("${PLUGIN}" --function last_backup --sid HDB --host 127.0.0.1 --port 30013 --user SYSTEM --pass secret --lookback 3 "$@" 2>&1)"; then
     echo "Plugin failed unexpectedly for backup type '${expected_type}'"
     printf '%s\n' "${output}"
     return 1
@@ -121,7 +123,8 @@ assert_case() {
 }
 assert_default() {
   local output
-  if ! output="$(env HDBCLIENT="${FAKE_HDBCLIENT}" "${PLUGIN}" --function last_backup --sid HDB --host 127.0.0.1 --port 30013 --user SYSTEM --pass secret --lookback 3 2>&1)"; then
+  export HDBCLIENT="${FAKE_HDBCLIENT}"
+  if ! output="$("${PLUGIN}" --function last_backup --sid HDB --host 127.0.0.1 --port 30013 --user SYSTEM --pass secret --lookback 3 2>&1)"; then
     echo "Default backup type failed"
     printf '%s\n' "${output}"
     return 1
@@ -131,9 +134,20 @@ assert_default() {
 
 bash -n "${PLUGIN}" 
 assert_default
-assert_case "incremental data backup" env HDBCLIENT="${FAKE_HDBCLIENT}" --backup-type "incremental data backup"
-assert_case "differential data backup" env HDBCLIENT="${FAKE_HDBCLIENT}" --backup-type "differential data backup"
-assert_case "data snapshot" env HDBCLIENT="${FAKE_HDBCLIENT}" --backup-type "data snapshot"
-assert_case "DATA_BACKUP" env HDBCLIENT="${FAKE_HDBCLIENT}" --backup-type DATA_BACKUP
+assert_case "incremental data backup" --backup-type "incremental data backup"
+assert_case "differential data backup" --backup-type "differential data backup"
+assert_case "data snapshot" --backup-type "data snapshot"
+assert_case "DATA_BACKUP" --backup-type DATA_BACKUP
 
+assert_invalid() {
+  local output
+  export HDBCLIENT="${FAKE_HDBCLIENT}"
+  if output="$("${PLUGIN}" --function last_backup --sid HDB --host 127.0.0.1 --port 30013 --user SYSTEM --pass secret --lookback 3 --backup-type invalid 2>&1)"; then
+    echo "Invalid backup type was accepted"
+    return 1
+  fi
+  [[ "${output}" == "UNKNOWN: Invalid backup type: invalid" ]]
+}
+
+assert_invalid
 echo "NEP-912 HANA last_backup plugin tests: OK"
