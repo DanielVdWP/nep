@@ -162,7 +162,13 @@
         },
         "nx-st-hana-last-backup": {
             "check_command": "nx-c-sap-check-hana-last-backup",
-            "fields": [],
+            "fields": [
+                {
+                    "datafield_id": 2053,
+                    "is_required": "n",
+                    "var_filter": null
+                }
+            ],
             "imports": [
                 "nx-st-agentless-sap-hana"
             ],
