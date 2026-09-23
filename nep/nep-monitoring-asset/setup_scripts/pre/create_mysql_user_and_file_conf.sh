@@ -32,7 +32,9 @@ function create_mysql_user_and_conf() {
     fi
 
     if [ -f "$mysql_pwd_file" ]; then
-        echo "$mysql_pwd_file already exists. Skip."
+        echo "$mysql_pwd_file already exists. Reusing existing credentials."
+        mysql_password=$(<"$mysql_pwd_file")
+    else
     else
         mysql_password=$(generate_and_save_pw "$mysql_username")
         echo " - Creating Database User for access"
