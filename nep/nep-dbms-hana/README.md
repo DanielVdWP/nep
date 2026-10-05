@@ -25,7 +25,7 @@ Command check
 
 | Sofware | Version |
 | ------- | ------- |
-| NetEye | 4.38 |
+| NetEye | 4.50 |
 | nep-common | 0.0.3 |
 | nep-dbms-base | 0.0.2 |
 
