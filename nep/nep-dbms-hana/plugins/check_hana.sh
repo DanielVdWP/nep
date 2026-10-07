@@ -256,8 +256,14 @@ FROM
       CASE WHEN BI.AGGREGATE_BY = 'NONE' OR INSTR(BI.AGGREGATE_BY, 'MESSAGE')          != 0 THEN CASE WHEN B.MESSAGE LIKE 'Not all data could be written%' THEN 'Not all data could be written'
         ELSE B.MESSAGE END ELSE MAP(BI.MESSAGE, '%', 'any', BI.MESSAGE) END MESSAGE,
       COUNT(DISTINCT(B.BACKUP_ID)) NUM_BACKUP_RUNS,
-      SUM(SECONDS_BETWEEN(B.SYS_START_TIME, B.SYS_END_TIME) / 3600) * SUM(BF.BACKUP_SIZE) / SUM(BF.TOTAL_BACKUP_SIZE) SUM_RUNTIME_H,
-      MAX(SECONDS_BETWEEN(B.SYS_START_TIME, B.SYS_END_TIME) / 3600) * MAX(BF.BACKUP_SIZE / BF.TOTAL_BACKUP_SIZE) MAX_RUNTIME_H,
+      COALESCE(
+        SUM(SECONDS_BETWEEN(B.SYS_START_TIME, B.SYS_END_TIME) / 3600) * SUM(BF.BACKUP_SIZE) / SUM(BF.TOTAL_BACKUP_SIZE),
+        SUM(SECONDS_BETWEEN(B.SYS_START_TIME, B.SYS_END_TIME) / 3600)
+      ) SUM_RUNTIME_H,
+      COALESCE(
+        MAX(SECONDS_BETWEEN(B.SYS_START_TIME, B.SYS_END_TIME) / 3600) * MAX(BF.BACKUP_SIZE / BF.TOTAL_BACKUP_SIZE),
+        MAX(SECONDS_BETWEEN(B.SYS_START_TIME, B.SYS_END_TIME) / 3600)
+      ) MAX_RUNTIME_H,
       IFNULL(SUM(BF.BACKUP_SIZE / 1024 / 1024 ), 0) SUM_BACKUP_SIZE_MB,
       IFNULL(MAX(BF.BACKUP_SIZE / 1024 / 1024 ), 0) MAX_BACKUP_SIZE_MB,
       MAX(CASE BI.TIMEZONE WHEN 'UTC' THEN ADD_SECONDS(B.SYS_START_TIME, SECONDS_BETWEEN(CURRENT_TIMESTAMP, CURRENT_UTCTIMESTAMP)) ELSE B.SYS_START_TIME END) MAX_START_TIME,
@@ -691,14 +697,20 @@ last_backup)
             # sample output:
             #"2023/02/20 19","any","any"," any","complete data backup","any","successful"," 1"," 0.00","AVG"," 41.98"," 129728.00"," 51.49"," 0.70","any"
             runtime=$(echo $last_backup | cut -d',' -f 11 | tr -d '[" ]')
-            runtime_int=$(echo $runtime | cut -d'.' -f 1)
-            [ -z $HANA_WARN ] && HANA_WARN=120
-            [ -z $HANA_CRIT ] && HANA_CRIT=240
-            ret_state=$STATE_OK
-            [ $runtime_int -ge $HANA_WARN ] && ret_state=$STATE_WARNING
-            [ $runtime_int -ge $HANA_CRIT ] && ret_state=$STATE_CRITICAL
-            result_string="Last successful data backup of the past $HANA_LOOKBACK day(s) startet $(echo $last_backup | cut -d',' -f 14 | tr -d '[" ]') days ago (runtime: ${runtime}m)"
-            PERF_OUT="|'runtime'=$runtime;$HANA_WARN;$HANA_CRIT;0;0"
+            [ -z "$HANA_WARN" ] && HANA_WARN=120
+            [ -z "$HANA_CRIT" ] && HANA_CRIT=240
+            if [ -z "$runtime" ]; then
+                ret_state=$STATE_CRITICAL
+                result_string="Last successful data backup returned an empty runtime"
+                PERF_OUT=""
+            else
+                runtime_int=$(echo $runtime | cut -d'.' -f 1)
+                ret_state=$STATE_OK
+                [ $runtime_int -ge $HANA_WARN ] && ret_state=$STATE_WARNING
+                [ $runtime_int -ge $HANA_CRIT ] && ret_state=$STATE_CRITICAL
+                result_string="Last successful data backup of the past $HANA_LOOKBACK day(s) startet $(echo $last_backup | cut -d',' -f 14 | tr -d '[" ]') days ago (runtime: ${runtime}m)"
+                PERF_OUT="|'runtime'=$runtime;$HANA_WARN;$HANA_CRIT;0;0"
+            fi
         fi
         [ $ret_state -eq $STATE_CRITICAL ] && result_string="CRITICAL - $result_string"
         [ $ret_state -eq $STATE_WARNING ]  && result_string="WARNING - $result_string"
